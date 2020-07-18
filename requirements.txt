@@ -2,3 +2,4 @@ llvmlite
 numba
 numpy
 mpi4py
+pandas
