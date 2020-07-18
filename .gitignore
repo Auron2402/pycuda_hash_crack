@@ -218,3 +218,4 @@ dmypy.json
 *.cubin
 *.fatbin
 
+/rockyou.txt
