@@ -1,4 +1,5 @@
 import os
+import datetime
 
 from mpi4py import MPI
 import string
@@ -40,6 +41,8 @@ minimum = comm.bcast(minimum, root=0)
 maximum = comm.bcast(maximum, root=0)
 alphabet = comm.bcast(alphabet, root=0)
 
+#starttime = datetime.datetime.now()
+
 result = []
 
 # set min and max range
@@ -65,7 +68,7 @@ for x in range(maximum):
         output = newoutput
     result.append(output)
 
-buffer = np.array(result).flatten()
+#looptime = datetime.datetime.now()
 
 # this is no parallel writing but its still better than no writing at all so STFU!
 f = open(f'wordlists/test_{rank}.txt', "w")
@@ -73,6 +76,27 @@ for line in result:
     for entry in line:
         f.write(entry + '\n')
 f.close()
+
+####### THIS WAS ONLY FOR TESTINT PURPOUSE
+# paralleltime = datetime.datetime.now()
+#
+# buffer = np.hstack(result)
+#
+# recvbuf = comm.gather(buffer, root=0)
+#
+# if rank == 0:
+#     writeout = np.hstack(recvbuf)
+#     f = open(f'wordlists/test_single.txt', "w")
+#     for entry in writeout:
+#         f.write(entry + '\n')
+#     f.close()
+#     print("looptime: " + str(looptime - starttime))
+#     print("parallelwrite: " + str(paralleltime - looptime))
+#     print("gathertime: " + str(datetime.datetime.now() - paralleltime))
+#
+
+
+
 
 
 # # FROM HERE THIS SHIT DOES NOT WORK! EITHER FIX IT OR SEND DATA INSTEAD OF WRITE DATA
@@ -82,3 +106,7 @@ f.close()
 #
 # fh.Write_at_all(offset, buffer)
 # fh.Close()
+
+
+
+# mpiexec /np 8 python wordlist_generator.py
