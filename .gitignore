@@ -219,3 +219,5 @@ dmypy.json
 *.fatbin
 
 /rockyou.txt
+/rockyou_smol.txt
+/wordlists/
