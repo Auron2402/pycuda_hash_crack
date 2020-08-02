@@ -7,6 +7,7 @@ import hashlib
 from enum import Enum
 from bitarray import bitarray
 import struct
+import typing
 
 
 T = np.array([math.floor(pow(2, 32) * abs(math.sin(i + 1))) for i in range(64)])
@@ -17,7 +18,7 @@ s4 = np.array([6, 10, 15, 21])
 
 # CUDA kernel
 @cuda.jit
-def crack_password(arr, out_hashes):
+def crack_password(arr, out_hashes, target_hash, matching_hash):
     #md5 = hashlib.md5(pw.encode('utf-8')).hexdigest()
     #output = True
     # Define the four auxiliary functions that produce one 32-bit word.
@@ -87,7 +88,7 @@ class PasswordCracker:
         super().__init__()
         self.password_list: List[str] = password_list
 
-    def crack_gpu(self):
+    def crack_gpu(self, pw:str) -> typing.List[str]:
         pw1 = PasswordCracker.__str_to_int_arr(self.password_list[0])
         arr = np.array([pw1], dtype=np.uint32)
         print(f"arr: {arr}")
@@ -102,7 +103,7 @@ class PasswordCracker:
         D = struct.unpack("<I", struct.pack(">I", out_hashes[0][3]))[0]
         print(f"my: {format(A, '08x')}{format(B, '08x')}{format(C, '08x')}{format(D, '08x')}")
         print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
-
+        return []
 
     def crack_cpu(self):
         pass
