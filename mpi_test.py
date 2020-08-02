@@ -1,6 +1,7 @@
 from mpi4py import MPI
 import numpy
 import pandas as pd
+import password_cracker
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
@@ -28,7 +29,18 @@ else:
 
 #send data
 data = comm.scatter(chunks, root=0)
-print('rank', rank, 'has data:', len(data))
+# print('rank', rank, 'has data:', len(data))
+
+# crack password on nodes
+crackme = password_cracker.PasswordCracker(data)
+testhash = "5f0c3c9a829e2b7aa376f3710160dc37"
+result = crackme.crack_gpu(pw=testhash)
+
+# recieve data
+recvbuf = comm.gather(result, root=0)
+
+if rank == 0:
+    print('ERGEBNIS: ' + recvbuf)
 
 # For windows pleps only:
 # mpiexec /np 8 python mpi_test.py
