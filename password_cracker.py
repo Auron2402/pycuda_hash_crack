@@ -81,6 +81,12 @@ def crack_password(arr, out_hashes, target_hash, matching_hash):
     out_hashes[0][2] = modular_add(out_hashes[0][2], C)
     out_hashes[0][3] = modular_add(out_hashes[0][3], D)
 
+    if (target_hash[0] == out_hashes[0][0] and
+        target_hash[1] == out_hashes[0][1] and
+        target_hash[2] == out_hashes[0][2] and
+        target_hash[3] == out_hashes[0][3]):
+        matching_hash = out_hashes[0]
+
 
 class PasswordCracker:
 
@@ -88,14 +94,16 @@ class PasswordCracker:
         super().__init__()
         self.password_list: List[str] = password_list
 
-    def crack_gpu(self, pw:str) -> typing.List[str]:
+    def crack_gpu(self, target_hash:str) -> typing.List[str]:
         pw1 = PasswordCracker.__str_to_int_arr(self.password_list[0])
         arr = np.array([pw1], dtype=np.uint32)
+        target_hash_arr = np.array([int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)], dtype=np.uint32)
         print(f"arr: {arr}")
         out_hashes = np.zeros((1, 4), dtype=np.uint32)
         # TODO: Parallel gpu execution
-        crack_password[1, 1](arr, out_hashes)
-        #crack_password(arr, out_hashes)
+        matching_hash = np.array(4, dtype=np.uint32)
+        crack_password[1, 1](arr, out_hashes, target_hash_arr, matching_hash)
+        #crack_password(arr, out_hashes, target_hash_arr, matching_hash)
         print(out_hashes)
         A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
         B = struct.unpack("<I", struct.pack(">I", out_hashes[0][1]))[0]
@@ -131,5 +139,5 @@ class PasswordCracker:
 
 
 
-cracker = PasswordCracker(['a'])
-cracker.crack_gpu()
+#cracker = PasswordCracker(['a'])
+#cracker.crack_gpu()
