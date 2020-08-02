@@ -91,6 +91,7 @@ class PasswordCracker:
         self.password_list: List[str] = password_list
 
     def crack_gpu(self, target_hash:str) -> typing.List[str]:
+        print(f"preparation phase (cpu)")
         passwords = [PasswordCracker.__str_to_int_arr(pw) for pw in self.password_list]
         arr = np.array(passwords, dtype=np.uint32)
         target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
@@ -103,6 +104,7 @@ class PasswordCracker:
 
         THREADS_PER_BLOCK = 512
         BLOCKS_PER_GRID = (len(passwords) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
+        print(f"cracking phase (gpu)")
         crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
         #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
         #print(out_hashes)
@@ -112,6 +114,7 @@ class PasswordCracker:
         #D = struct.unpack("<I", struct.pack(">I", out_hashes[0][3]))[0]
         #print(f"my: {format(A, '08x')}{format(B, '08x')}{format(C, '08x')}{format(D, '08x')}")
         #print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
+        print(f"finished")
         if matching_hash_index[0] != -1:
             return [self.password_list[matching_hash_index[0]]]
         return []
@@ -121,6 +124,7 @@ class PasswordCracker:
     
     @staticmethod
     def __str_to_int_arr(s: str):
+        s = str(s)
         bit_array = bitarray(endian="big")
         bit_array.frombytes(s.encode("utf-8"))
         bit_array.append(1)
