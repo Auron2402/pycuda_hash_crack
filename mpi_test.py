@@ -15,7 +15,7 @@ rank = comm.Get_rank()
 # read data
 if rank == 0:
     # rockyou has 14.344.395 lines
-    complete_data = pd.read_csv('rockyou.txt', sep="\n", encoding='latin-1', header=None, squeeze=True, error_bad_lines=False)
+    complete_data = pd.read_csv('wordlists/rockyou.txt', sep="\n", encoding='latin-1', header=None, squeeze=True, error_bad_lines=False)
 else:
     complete_data = None
 
@@ -32,15 +32,17 @@ data = comm.scatter(chunks, root=0)
 # print('rank', rank, 'has data:', len(data))
 
 # crack password on nodes
-crackme = password_cracker.PasswordCracker(data)
+crackme = password_cracker.PasswordCracker(data.tolist())
 testhash = "5f0c3c9a829e2b7aa376f3710160dc37"
-result = crackme.crack_gpu(pw=testhash)
+result = crackme.crack_gpu(target_hash=testhash)
 
 # recieve data
 recvbuf = comm.gather(result, root=0)
 
 if rank == 0:
-    print('ERGEBNIS: ' + recvbuf)
+    flat_list = [item for sublist in recvbuf for item in sublist]
+    for ergebnis in flat_list:
+        print('ERGEBNIS: ' + ergebnis)
 
 # For windows pleps only:
 # mpiexec /np 8 python mpi_test.py
