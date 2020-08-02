@@ -110,7 +110,8 @@ def str_to_int_arr(s: str):
 
 
 def int_arr_to_str(arr):
-    X = [i.to_bytes(4, byteorder="little") for i in arr]
+    X = [int(i) for i in arr]
+    X = [i.to_bytes(4, byteorder="little") for i in X]
     X = X[0:-2] # remove lenght
     X = reduce(lambda t1, t2: t1 + t2, X)
     while True:
@@ -141,7 +142,7 @@ def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
     matching_hash_index = np.array([-1], dtype=np.int64)
 
     THREADS_PER_BLOCK = 512
-    BLOCKS_PER_GRID = (len(passwords) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
+    BLOCKS_PER_GRID = (len(arr) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
     print(f"cracking phase (gpu)")
     crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
     #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
@@ -154,11 +155,9 @@ def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
     #print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
     print(f"finished")
     if matching_hash_index[0] != -1:
-        return [self.password_list[matching_hash_index[0]]]
+        return [int_arr_to_str(password_list[matching_hash_index[0]])]
     return []
 
-    def crack_cpu(self):
-        pass
 
         
 
