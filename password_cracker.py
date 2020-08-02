@@ -1,4 +1,6 @@
 from __future__ import division
+
+from functools import reduce
 from typing import List
 from numba import cuda
 import numpy as np
@@ -84,66 +86,80 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index):
             matching_hash_index[0] = pos
 
 
-class PasswordCracker:
+def str_to_int_arr(s: str):
+    s = str(s)
+    bit_array = bitarray(endian="big")
+    bit_array.frombytes(s.encode("utf-8"))
+    bit_array.append(1)
+    while bit_array.length() % 512 != 448:
+        bit_array.append(0)
+    bit_array = bitarray(bit_array, endian="little")
+    length = (len(s) * 8) % pow(2, 64)
+    length_bit_array = bitarray(endian="little")
+    length_bit_array.frombytes(struct.pack("<Q", length))
 
-    def __init__(self, password_list: List[str]) -> None:
-        super().__init__()
-        self.password_list: List[str] = password_list
+    result = bit_array.copy()
+    result.extend(length_bit_array)
+    if result.length() != 512: # ignore very large passwords
+        print(f"too long (ignored): {s}")
+        return str_to_int_arr("")
+    #print(result)
+    X = [result[(x * 32) : (x * 32) + 32] for x in range(16)]
+    X = [int.from_bytes(word.tobytes(), byteorder="little") for word in X]
+    return X
 
-    def crack_gpu(self, target_hash:str) -> typing.List[str]:
-        print(f"preparation phase (cpu)")
-        passwords = [PasswordCracker.__str_to_int_arr(pw) for pw in self.password_list]
-        arr = np.array(passwords, dtype=np.uint32)
-        target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
-        target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)
-        #print(f"arr: {arr}")
-        #print(target_hash_arr)
-        out_hashes = np.zeros((1, 4), dtype=np.uint32)
-        # TODO: Parallel gpu execution
-        matching_hash_index = np.array([-1], dtype=np.int64)
 
-        THREADS_PER_BLOCK = 512
-        BLOCKS_PER_GRID = (len(passwords) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
-        print(f"cracking phase (gpu)")
-        crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
-        #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
-        #print(out_hashes)
-        #A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
-        #B = struct.unpack("<I", struct.pack(">I", out_hashes[0][1]))[0]
-        #C = struct.unpack("<I", struct.pack(">I", out_hashes[0][2]))[0]
-        #D = struct.unpack("<I", struct.pack(">I", out_hashes[0][3]))[0]
-        #print(f"my: {format(A, '08x')}{format(B, '08x')}{format(C, '08x')}{format(D, '08x')}")
-        #print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
-        print(f"finished")
-        if matching_hash_index[0] != -1:
-            return [self.password_list[matching_hash_index[0]]]
-        return []
+def int_arr_to_str(arr):
+    X = [i.to_bytes(4, byteorder="little") for i in arr]
+    X = X[0:-2] # remove lenght
+    X = reduce(lambda t1, t2: t1 + t2, X)
+    while True:
+        if X[-1] == 0:
+            X = X[0:-1]
+        elif X[-1] == 128:
+            X = X[0:-1]
+            break
+    return X.decode("utf-8")
+
+
+# turns stringlists to int arrays for easyer gpu processing
+def prepare_wordlist(password_list: List[str]):
+    passwords = [str_to_int_arr(pw) for pw in password_list]
+    arr = np.array(passwords, dtype=np.uint32)
+    return arr
+
+
+def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
+    print(f"preparation phase (cpu)")
+    arr = password_list
+    target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
+    target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)
+    #print(f"arr: {arr}")
+    #print(target_hash_arr)
+    out_hashes = np.zeros((1, 4), dtype=np.uint32)
+    # TODO: Parallel gpu execution
+    matching_hash_index = np.array([-1], dtype=np.int64)
+
+    THREADS_PER_BLOCK = 512
+    BLOCKS_PER_GRID = (len(passwords) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
+    print(f"cracking phase (gpu)")
+    crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
+    #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
+    #print(out_hashes)
+    #A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
+    #B = struct.unpack("<I", struct.pack(">I", out_hashes[0][1]))[0]
+    #C = struct.unpack("<I", struct.pack(">I", out_hashes[0][2]))[0]
+    #D = struct.unpack("<I", struct.pack(">I", out_hashes[0][3]))[0]
+    #print(f"my: {format(A, '08x')}{format(B, '08x')}{format(C, '08x')}{format(D, '08x')}")
+    #print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
+    print(f"finished")
+    if matching_hash_index[0] != -1:
+        return [self.password_list[matching_hash_index[0]]]
+    return []
 
     def crack_cpu(self):
         pass
-    
-    @staticmethod
-    def __str_to_int_arr(s: str):
-        s = str(s)
-        bit_array = bitarray(endian="big")
-        bit_array.frombytes(s.encode("utf-8"))
-        bit_array.append(1)
-        while bit_array.length() % 512 != 448:
-            bit_array.append(0)
-        bit_array = bitarray(bit_array, endian="little")
-        length = (len(s) * 8) % pow(2, 64)
-        length_bit_array = bitarray(endian="little")
-        length_bit_array.frombytes(struct.pack("<Q", length))
 
-        result = bit_array.copy()
-        result.extend(length_bit_array)
-        if result.length() != 512: # ignore very large passwords
-            print(f"too long (ignored): {s}")
-            return PasswordCracker.__str_to_int_arr("")
-        #print(result)
-        X = [result[(x * 32) : (x * 32) + 32] for x in range(16)]
-        X = [int.from_bytes(word.tobytes(), byteorder="little") for word in X]
-        return X
         
 
 
