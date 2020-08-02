@@ -133,7 +133,9 @@ class PasswordCracker:
 
         result = bit_array.copy()
         result.extend(length_bit_array)
-        assert(result.length() == 512)
+        if result.length() != 512: # ignore very large passwords
+            print(f"too long (ignored): {s}")
+            return PasswordCracker.__str_to_int_arr("")
         #print(result)
         X = [result[(x * 32) : (x * 32) + 32] for x in range(16)]
         X = [int.from_bytes(word.tobytes(), byteorder="little") for word in X]
