@@ -17,7 +17,7 @@ s3 = np.array([4, 11, 16, 23])
 s4 = np.array([6, 10, 15, 21])
 
 # CUDA kernel
-#@cuda.jit
+@cuda.jit
 def crack_password(arr, out_hashes, target_hash, matching_hash_index):
     # Thread id in a 1D block
     tx = cuda.threadIdx.x
@@ -103,8 +103,8 @@ class PasswordCracker:
 
         THREADS_PER_BLOCK = 512
         BLOCKS_PER_GRID = (len(passwords) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
-        #crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
-        crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
+        crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
+        #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
         #print(out_hashes)
         #A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
         #B = struct.unpack("<I", struct.pack(">I", out_hashes[0][1]))[0]

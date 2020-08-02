@@ -5,6 +5,6 @@ import math
 
 from password_cracker import PasswordCracker
 
-cracker = PasswordCracker(['test'])
-res = cracker.crack_gpu(target_hash="098f6bcd4621d373cade4e832627b4f6")
+cracker = PasswordCracker(['hhhyhyhgtuj'])
+res = cracker.crack_gpu(target_hash="fd005671d7a0b03ddfb69dd7f151665b")
 print(res)
