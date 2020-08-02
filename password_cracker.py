@@ -26,7 +26,7 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index):
     # Block width, i.e. number of threads per block
     bw = cuda.blockDim.x
     # Compute flattened index inside the array
-    #pos = tx + ty * bw
+    pos = tx + ty * bw
     pos = 0
     if pos < arr.size:  # Check array boundaries
         F = lambda x, y, z: (x & y) | (~x & z)
