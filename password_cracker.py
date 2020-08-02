@@ -139,5 +139,5 @@ class PasswordCracker:
 
 
 
-#cracker = PasswordCracker(['a'])
-#cracker.crack_gpu()
+# cracker = PasswordCracker(['a'])
+# cracker.crack_gpu()
