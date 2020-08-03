@@ -101,7 +101,7 @@ def str_to_int_arr(s: str):
     result = bit_array.copy()
     result.extend(length_bit_array)
     if result.length() != 512: # ignore very large passwords
-        print(f"too long (ignored): {s}")
+        #print(f"too long (ignored): {s}")
         return str_to_int_arr("")
     #print(result)
     X = [result[(x * 32) : (x * 32) + 32] for x in range(16)]
