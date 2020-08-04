@@ -12,7 +12,7 @@ def preprocess(filename):
     # read file, split file in chunks
     if rank == 0:
         unprocessed_data = pd.read_csv(f'wordlists/{filename}.txt', sep="\n", encoding='latin-1', header=None,
-                                       squeeze=True, error_bad_lines=False, quoting=3)
+                                       squeeze=True, error_bad_lines=False, quoting=3, nrows=2147483600)
         unprocessed_chunks = numpy.array_split(unprocessed_data, size, axis=0)
     else:
         unprocessed_chunks = None
