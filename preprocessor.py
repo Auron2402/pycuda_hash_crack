@@ -7,14 +7,24 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
+class StringConverter(dict):
+    def __contains__(self, item):
+        return True
+
+    def __getitem__(self, item):
+        return str
+
+    def get(self, default=None):
+        return str
+
 
 def preprocess(filename):
     print(f'I have rank {rank} in a size {size} cluster.')
     # read file, split file in chunks
     if rank == 0:
         unprocessed_data = pd.read_csv(f'wordlists/{filename}.txt', sep="\n", encoding='latin-1', header=None,
-                                       squeeze=True, error_bad_lines=False, quoting=3)
-        unprocessed_data = [str(x) for x in unprocessed_data]
+                                       squeeze=True, error_bad_lines=False, quoting=3, converters=StringConverter())
+        # unprocessed_data = [str(x) for x in unprocessed_data]
         unprocessed_chunks = numpy.array_split(unprocessed_data, size, axis=0)
     else:
         unprocessed_chunks = None
