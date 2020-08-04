@@ -54,4 +54,4 @@ if rank == 0:
         print(ergebnis)
 
 # For windows pleps only:
-# mpiexec /np 8 python mpi_test.py
+# mpiexec /np 8 python mpi_test.py a68d45a5f47c05263f2991543dd044d0 HashesOrg
