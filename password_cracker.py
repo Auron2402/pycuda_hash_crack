@@ -11,10 +11,21 @@ from bitarray import bitarray
 import struct
 import typing
 
+T_ = np.array([math.floor(pow(2, 32) * abs(math.sin(i + 1))) for i in range(64)])
+s1_ = np.array([7, 12, 17, 22])
+s2_ = np.array([5, 9, 14, 20])
+s3_ = np.array([4, 11, 16, 23])
+s4_ = np.array([6, 10, 15, 21])
 
 # CUDA kernel
 @cuda.jit
-def crack_password(arr, out_hashes, target_hash, matching_hash_index, T, s1, s2, s3, s4):
+def crack_password(arr, target_hash, matching_hash_index):
+    T = cuda.const.array_like(T_)
+    s1 = cuda.const.array_like(s1_)
+    s2 = cuda.const.array_like(s2_)
+    s3 = cuda.const.array_like(s3_)
+    s4 = cuda.const.array_like(s4_)
+
     # Thread id in a 1D block
     tx = cuda.threadIdx.x
     # Block id in a 1D grid
@@ -33,10 +44,10 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index, T, s1, s2,
         rotate_left = lambda x, n: (x << n) | (x >> (32 - n))
         modular_add = lambda a, b: (a + b) % pow(2, 32)
 
-        out_hashes[pos][0] = A = 0x67452301
-        out_hashes[pos][1] = B = 0xEFCDAB89
-        out_hashes[pos][2] = C = 0x98BADCFE
-        out_hashes[pos][3] = D = 0x10325476
+        o0 = A = 0x67452301
+        o1 = B = 0xEFCDAB89
+        o2 = C = 0x98BADCFE
+        o3 = D = 0x10325476
 
         for i in range(4 * 16):
             if 0 <= i <= 15:
@@ -67,15 +78,15 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index, T, s1, s2,
             C = B
             B = temp
 
-        out_hashes[pos][0] = modular_add(out_hashes[pos][0], A)
-        out_hashes[pos][1] = modular_add(out_hashes[pos][1], B)
-        out_hashes[pos][2] = modular_add(out_hashes[pos][2], C)
-        out_hashes[pos][3] = modular_add(out_hashes[pos][3], D)
+        o0 = modular_add(o0, A)
+        o1 = modular_add(o1, B)
+        o2 = modular_add(o2, C)
+        o3 = modular_add(o3, D)
 
-        if (target_hash[0] == out_hashes[pos][0] and
-            target_hash[1] == out_hashes[pos][1] and
-            target_hash[2] == out_hashes[pos][2] and
-            target_hash[3] == out_hashes[pos][3]):
+        if (target_hash[0] == o0 and
+            target_hash[1] == o1 and
+            target_hash[2] == o2 and
+            target_hash[3] == o3):
             #matching_hash_index[0] = -10
             #from pdb import set_trace; set_trace()
             cuda.atomic.compare_and_swap(matching_hash_index, -1, pos)
@@ -133,24 +144,19 @@ def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
     target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)
     #print(f"arr: {arr}")
     #print(target_hash_arr)
-    out_hashes = np.zeros((arr.shape[0], 4), dtype=np.uint32)
+    #out_hashes = np.zeros((arr.shape[0], 4), dtype=np.uint32)
     # TODO: Parallel gpu execution
     matching_hash_index = np.array([-1], dtype=np.int32)
 
     THREADS_PER_BLOCK = 512
     BLOCKS_PER_GRID = (arr.shape[0] + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
 
-    out_hashes = cuda.to_device(out_hashes)
+    #out_hashes = cuda.local.array((4,), dtype=np.uint32)
     target_hash_arr = cuda.to_device(target_hash_arr)
     matching_hash_index = cuda.to_device(matching_hash_index)
-    T = cuda.to_device(np.array([math.floor(pow(2, 32) * abs(math.sin(i + 1))) for i in range(64)]))
-    s1 = cuda.to_device(np.array([7, 12, 17, 22]))
-    s2 = cuda.to_device(np.array([5, 9, 14, 20]))
-    s3 = cuda.to_device(np.array([4, 11, 16, 23]))
-    s4 = cuda.to_device(np.array([6, 10, 15, 21]))
     arr = cuda.to_device(arr)
     print(f"cracking phase (gpu)")
-    crack_password[500, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index, T, s1, s2, s3, s4)
+    crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, target_hash_arr, matching_hash_index)
     #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
     #print(out_hashes)
     #A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
