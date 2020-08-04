@@ -36,7 +36,7 @@ else:
 password_list = comm.scatter(chunks, root=0)
 
 # crack password on nodes
-testhash = "fd005671d7a0b03ddfb69dd7f151665b"
+testhash = "f806fc5a2a0d5ba2471600758452799c"
 result = password_cracker.crack_gpu(password_list=password_list, target_hash=testhash)
 
 # recieve data

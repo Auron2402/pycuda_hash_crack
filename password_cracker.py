@@ -12,15 +12,9 @@ import struct
 import typing
 
 
-T = np.array([math.floor(pow(2, 32) * abs(math.sin(i + 1))) for i in range(64)])
-s1 = np.array([7, 12, 17, 22])
-s2 = np.array([5, 9, 14, 20])
-s3 = np.array([4, 11, 16, 23])
-s4 = np.array([6, 10, 15, 21])
-
 # CUDA kernel
 @cuda.jit
-def crack_password(arr, out_hashes, target_hash, matching_hash_index):
+def crack_password(arr, out_hashes, target_hash, matching_hash_index, T, s1, s2, s3, s4):
     # Thread id in a 1D block
     tx = cuda.threadIdx.x
     # Block id in a 1D grid
@@ -30,7 +24,7 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index):
     # Compute flattened index inside the array
     pos = tx + ty * bw
     #pos = 0
-    if pos < arr.size:  # Check array boundaries
+    if pos < arr.shape[0]:  # Check array boundaries
         F = lambda x, y, z: (x & y) | (~x & z)
         G = lambda x, y, z: (x & z) | (y & ~z)
         H = lambda x, y, z: x ^ y ^ z
@@ -73,7 +67,6 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index):
             C = B
             B = temp
 
-
         out_hashes[pos][0] = modular_add(out_hashes[pos][0], A)
         out_hashes[pos][1] = modular_add(out_hashes[pos][1], B)
         out_hashes[pos][2] = modular_add(out_hashes[pos][2], C)
@@ -83,7 +76,10 @@ def crack_password(arr, out_hashes, target_hash, matching_hash_index):
             target_hash[1] == out_hashes[pos][1] and
             target_hash[2] == out_hashes[pos][2] and
             target_hash[3] == out_hashes[pos][3]):
-            matching_hash_index[0] = pos
+            #matching_hash_index[0] = -10
+            #from pdb import set_trace; set_trace()
+            cuda.atomic.compare_and_swap(matching_hash_index, -1, pos)
+
 
 
 def str_to_int_arr(s: str):
@@ -112,7 +108,7 @@ def str_to_int_arr(s: str):
 def int_arr_to_str(arr):
     X = [int(i) for i in arr]
     X = [i.to_bytes(4, byteorder="little") for i in X]
-    X = X[0:-2] # remove lenght
+    X = X[0:-2] # remove length
     X = reduce(lambda t1, t2: t1 + t2, X)
     while True:
         if X[-1] == 0:
@@ -123,7 +119,7 @@ def int_arr_to_str(arr):
     return X.decode("utf-8")
 
 
-# turns stringlists to int arrays for easyer gpu processing
+# turns stringlists to int arrays for easier gpu processing
 def prepare_wordlist(password_list: List[str]):
     passwords = [str_to_int_arr(pw) for pw in password_list]
     arr = np.array(passwords, dtype=np.uint32)
@@ -131,20 +127,30 @@ def prepare_wordlist(password_list: List[str]):
 
 
 def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
-    print(f"preparation phase (cpu)")
+    #print(f"preparation phase (cpu)")
     arr = password_list
     target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
     target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)
     #print(f"arr: {arr}")
     #print(target_hash_arr)
-    out_hashes = np.zeros((1, 4), dtype=np.uint32)
+    out_hashes = np.zeros((arr.shape[0], 4), dtype=np.uint32)
     # TODO: Parallel gpu execution
-    matching_hash_index = np.array([-1], dtype=np.int64)
+    matching_hash_index = np.array([-1], dtype=np.int32)
 
     THREADS_PER_BLOCK = 512
-    BLOCKS_PER_GRID = (len(arr) + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
+    BLOCKS_PER_GRID = (arr.shape[0] + (THREADS_PER_BLOCK - 1)) // THREADS_PER_BLOCK # only 1 "Grid"
+
+    out_hashes = cuda.to_device(out_hashes)
+    target_hash_arr = cuda.to_device(target_hash_arr)
+    matching_hash_index = cuda.to_device(matching_hash_index)
+    T = cuda.to_device(np.array([math.floor(pow(2, 32) * abs(math.sin(i + 1))) for i in range(64)]))
+    s1 = cuda.to_device(np.array([7, 12, 17, 22]))
+    s2 = cuda.to_device(np.array([5, 9, 14, 20]))
+    s3 = cuda.to_device(np.array([4, 11, 16, 23]))
+    s4 = cuda.to_device(np.array([6, 10, 15, 21]))
+    arr = cuda.to_device(arr)
     print(f"cracking phase (gpu)")
-    crack_password[BLOCKS_PER_GRID, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index)
+    crack_password[500, THREADS_PER_BLOCK](arr, out_hashes, target_hash_arr, matching_hash_index, T, s1, s2, s3, s4)
     #crack_password(arr, out_hashes, target_hash_arr, matching_hash_index)
     #print(out_hashes)
     #A = struct.unpack("<I", struct.pack(">I", out_hashes[0][0]))[0]
@@ -154,6 +160,8 @@ def crack_gpu(password_list, target_hash: str) -> typing.List[str]:
     #print(f"my: {format(A, '08x')}{format(B, '08x')}{format(C, '08x')}{format(D, '08x')}")
     #print(f"py: {hashlib.md5(self.password_list[0].encode('utf-8')).hexdigest()}")
     print(f"finished")
+    matching_hash_index = matching_hash_index.copy_to_host()
+    print(f"index: {matching_hash_index}")
     if matching_hash_index[0] != -1:
         return [int_arr_to_str(password_list[matching_hash_index[0]])]
     return []
