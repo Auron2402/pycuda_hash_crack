@@ -4,22 +4,18 @@ import pandas as pd
 import password_cracker
 import os
 import preprocessor
+import sys
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-# Ask for hash and filename
-hash_to_crack = "a68d45a5f47c05263f2991543dd044d0"  # variable set so variable check does not fail
-filename = "rockyou"  # variable set so variable check does not fail
-if rank == 0:
-    filename = input('\nDateiname für Wordlist: ')
-    if filename == '':
-        filename = "rockyou"
+# get parameters from call and save them
+filename = "rockyou"  # if no 2nd argument is set, set rockyou
+hash_to_crack = sys.argv[1]
+if len(sys.argv) == 3:
+    filename = sys.argv[2]
 
-    hash_to_crack = input('\nHash der überprüft werden soll: ')
-    if hash_to_crack == '':
-        hash_to_crack = "a68d45a5f47c05263f2991543dd044d0"
 
 # if not already done, preprocess data
 if not os.path.exists(f'wordlists/{filename}.npy'):
