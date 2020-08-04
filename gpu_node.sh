@@ -23,5 +23,5 @@ source /apps/python/3.7-anaconda/etc/profile.d/conda.sh
 conda activate myenv
 
 # start project
-mpirun -np 4 python mpi_test.py
+mpirun -np 16 python mpi_test.py e10adc3949ba59abbe56e057f20f883e HashesOrg
 

@@ -48,7 +48,7 @@ recvbuf = comm.gather(result, root=0)
 
 # print result
 if rank == 0:
-    print('ERGEBNIS: \n')
+    print('result: \n')
     flat_list = [item for sublist in recvbuf for item in sublist]
     for ergebnis in flat_list:
         print(ergebnis)
