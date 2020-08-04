@@ -22,21 +22,27 @@ def preprocess(filename):
     print(f'I have rank {rank} in a size {size} cluster.')
     # read file, split file in chunks
     if rank == 0:
+        # read data
         unprocessed_data = pd.read_csv(f'wordlists/{filename}.txt', sep="\n", encoding='latin-1', header=None,
-                                       squeeze=True, error_bad_lines=False, quoting=3, converters=StringConverter())
-        # unprocessed_data = [str(x) for x in unprocessed_data]
-        unprocessed_chunks = numpy.array_split(unprocessed_data, size, axis=0)
+                                       squeeze=True, error_bad_lines=False, quoting=3)
+
+        # split and cast to string
+        unprocessed_chunks = numpy.array_split(unprocessed_data.astype(dtype='str'), size)
+        del unprocessed_data  # free up memory
     else:
         unprocessed_chunks = None
 
     # scatter data to nodes
-    data = comm.scatter(unprocessed_chunks, root=0)
+    recv_data = comm.scatter(unprocessed_chunks, root=0)
+    del unprocessed_chunks  # free up memory
 
     # call jonas preprocessing
-    processed_data = password_cracker.prepare_wordlist(data)
+    processed_data = password_cracker.prepare_wordlist(recv_data)
+    del recv_data  # free up memory
 
     # gather data from nodes
     recvbuf = comm.gather(processed_data, root=0)
+    del processed_data  # free up memory
 
     # flatten array, write to npy file
     if rank == 0:
