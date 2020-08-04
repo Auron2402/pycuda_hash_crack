@@ -9,10 +9,19 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-filename = "rockyou"
+# Ask for hash and filename
+hash_to_crack = "a68d45a5f47c05263f2991543dd044d0"  # variable set so variable check does not fail
+filename = "rockyou"  # variable set so variable check does not fail
+if rank == 0:
+    filename = input('\nDateiname für Wordlist: ')
+    if filename == '':
+        filename = "rockyou"
 
-# read data or preprocess it b4 reading it
+    hash_to_crack = input('\nHash der überprüft werden soll: ')
+    if hash_to_crack == '':
+        hash_to_crack = "a68d45a5f47c05263f2991543dd044d0"
 
+# if not already done, preprocess data
 if not os.path.exists(f'wordlists/{filename}.npy'):
     if rank == 0:
         print('Have to Preprocess data')
@@ -36,8 +45,7 @@ else:
 password_list = comm.scatter(chunks, root=0)
 
 # crack password on nodes
-testhash = "a68d45a5f47c05263f2991543dd044d0"
-result = password_cracker.crack_gpu(password_list=password_list, target_hash=testhash, gpu_id=rank)
+result = password_cracker.crack_gpu(password_list=password_list, target_hash=hash_to_crack)
 
 # recieve data
 recvbuf = comm.gather(result, root=0)
