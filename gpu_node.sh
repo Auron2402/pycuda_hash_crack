@@ -1,9 +1,7 @@
 #!/bin/bash -l
 #
-#SBATCH --nodes=1
-#SBATCH -tasks-per-node=1
-#SBATCH -job-name=CodeBreakerCuda
-#SBATCH --export=NONE
+#PBS -l nodes=1:ppn=16,walltime=00:10:00
+#PBS -N CodeBreakerCuda
 
 # script start here
 echo "tinyGPU Node:"
@@ -25,5 +23,5 @@ source /apps/python/3.7-anaconda/etc/profile.d/conda.sh
 conda activate myenv
 
 # start project
-python3 numba_test.py
+mpirun -np 4 python mpi_test.py
 
