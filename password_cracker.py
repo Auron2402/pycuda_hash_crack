@@ -141,7 +141,8 @@ def prepare_wordlist(password_list: List[str]):
 
 
 def crack_gpu(password_list, target_hash: str, gpu_id:int) -> typing.List[str]:
-    cuda.select_device(gpu_id)
+    if gpu_id != 0:
+        cuda.select_device(gpu_id)
     arr = password_list
     target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
     target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)

@@ -53,5 +53,5 @@ def preprocess(filename):
 
     # flatten array, write to npy file
     if rank == 0:
-        flat_list = [item for sublist in recvbuf for item in sublist]
-        numpy.save(f'wordlists/{filename}.npy', flat_list)
+        #flat_list = [item for sublist in recvbuf for item in sublist]
+        numpy.save(f'wordlists/{filename}.npy', recvbuf)
