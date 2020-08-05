@@ -41,7 +41,7 @@ else:
 password_list = comm.scatter(chunks, root=0)
 
 # crack password on nodes
-result = password_cracker.crack_gpu(password_list=password_list, target_hash=hash_to_crack)
+result = password_cracker.crack_gpu(password_list=password_list, target_hash=hash_to_crack, gpu_id=rank)
 
 # recieve data
 recvbuf = comm.gather(result, root=0)

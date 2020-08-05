@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#PBS -l nodes=1:ppn=16,walltime=00:10:00
+#PBS -l nodes=1:ppn=16,walltime=00:60:00
 #PBS -N CodeBreakerCuda
 
 # script start here
@@ -14,8 +14,9 @@ unset SLURM_EXPORT_ENV
 cd pycuda_hash_crack || exit
 
 # load required modules
-module load python/3.7-anaconda
+module load intelmpi/2019up05-intel
 module load cuda/10.2
+module load python/3.7-anaconda
 
 # configure environment vars for conda
 source /apps/python/3.7-anaconda/etc/profile.d/conda.sh
@@ -23,5 +24,6 @@ source /apps/python/3.7-anaconda/etc/profile.d/conda.sh
 conda activate myenv
 
 # start project
-mpirun -np 16 python mpi_test.py e10adc3949ba59abbe56e057f20f883e HashesOrg
+echo "running mpirun:"
+mpirun -n 16 python mpi_test.py e10adc3949ba59abbe56e057f20f883e HashesOrg
 

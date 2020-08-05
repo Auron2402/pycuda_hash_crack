@@ -132,8 +132,11 @@ def int_arr_to_str(arr):
 
 # turns stringlists to int arrays for easier gpu processing
 def prepare_wordlist(password_list: List[str]):
-    passwords = [str_to_int_arr(pw) for pw in password_list]
-    arr = np.array(passwords, dtype=np.uint32)
+    arr = np.zeros((len(password_list),16), dtype=np.uint32)
+    for i in range(len(password_list)):
+        arr[i] = str_to_int_arr(password_list[i])
+    #passwords = [str_to_int_arr(pw) for pw in password_list]
+    #arr = np.array(passwords, dtype=np.uint32)
     return arr
 
 
