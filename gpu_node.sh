@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#PBS -l nodes=1:ppn=16,walltime=00:60:00
+#PBS -l nodes=1:ppn=16,walltime=00:30:00
 #PBS -N CodeBreakerCuda
 
 # script start here
@@ -25,5 +25,5 @@ conda activate myenv
 
 # start project
 echo "running mpirun:"
-mpirun -n 16 python mpi_test.py e10adc3949ba59abbe56e057f20f883e HashesOrg
+mpirun -n 4 python mpi_test.py e10adc3949ba59abbe56e057f20f883e hashesorg_1
 

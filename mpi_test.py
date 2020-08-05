@@ -5,6 +5,7 @@ import password_cracker
 import os
 import preprocessor
 import sys
+import bigmpi4py as BM
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
@@ -33,24 +34,24 @@ if need_to_preprocess:
 # read and split data
 if rank == 0:
     complete_data = numpy.load(f'wordlists/{filename}.npy')
-    chunks = numpy.array_split(complete_data, size, axis=0)
+    #chunks = numpy.array_split(complete_data, size, axis=0)
 else:
-    chunks = None
+    complete_data = None
 
 # send data
-password_list = comm.scatter(chunks, root=0)
+password_list = BM.scatter(complete_data, comm)
 
 # crack password on nodes
 result = password_cracker.crack_gpu(password_list=password_list, target_hash=hash_to_crack, gpu_id=rank)
 
 # recieve data
-recvbuf = comm.gather(result, root=0)
+recvbuf = BM.gather(result, comm)
 
 # print result
 if rank == 0:
     print('result: \n')
-    flat_list = [item for sublist in recvbuf for item in sublist]
-    for ergebnis in flat_list:
+    #flat_list = [item for sublist in recvbuf for item in sublist]
+    for ergebnis in recvbuf:
         print(ergebnis)
 
 # For windows pleps only:
