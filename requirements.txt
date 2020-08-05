@@ -4,3 +4,4 @@ numba
 numpy
 mpi4py
 pandas
+bigmpi4py

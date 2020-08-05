@@ -2,6 +2,7 @@ from mpi4py import MPI
 import pandas as pd
 import password_cracker
 import numpy
+import bigmpi4py as BM
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
@@ -33,7 +34,8 @@ def preprocess(filename):
         unprocessed_chunks = None
 
     # scatter data to nodes
-    recv_data = comm.scatter(unprocessed_chunks, root=0)
+    recv_data = BM.scatter(unprocessed_chunks, comm)
+    # recv_data = comm.scatter(unprocessed_chunks, root=0)
     del unprocessed_chunks  # free up memory
 
     # call jonas preprocessing
@@ -41,7 +43,8 @@ def preprocess(filename):
     del recv_data  # free up memory
 
     # gather data from nodes
-    recvbuf = comm.gather(processed_data, root=0)
+    recvbuf = BM.gather(processed_data, comm)
+    # recvbuf = comm.gather(processed_data, root=0)
     del processed_data  # free up memory
 
     # flatten array, write to npy file
