@@ -94,25 +94,34 @@ def crack_password(arr, target_hash, matching_hash_index):
 
 
 def str_to_int_arr(s: str):
-    s = str(s)
+    #s = str(s)
+    #bytes = s.encode("utf-8")
     bit_array = bitarray(endian="big")
     bit_array.frombytes(s.encode("utf-8"))
     bit_array.append(1)
-    while bit_array.length() % 512 != 448:
-        bit_array.append(0)
+    bit_array.extend('0' * (448 - bit_array.length()))
+    #while bit_array.length() % 512 != 448:
+    #    bit_array.append(0)
+    bit_array1 = bit_array
     bit_array = bitarray(bit_array, endian="little")
-    length = (len(s) * 8) % pow(2, 64)
+    length = len(s) * 8
     length_bit_array = bitarray(endian="little")
     length_bit_array.frombytes(struct.pack("<Q", length))
 
-    result = bit_array.copy()
-    result.extend(length_bit_array)
-    if result.length() != 512: # ignore very large passwords
+    #result = bit_array.copy()
+    bit_array.extend(length_bit_array)
+    if bit_array.length() != 512: # ignore very large passwords
         #print(f"too long (ignored): {s}")
+        del bit_array
+        del bit_array1
+        del length_bit_array
         return str_to_int_arr("")
     #print(result)
-    X = [result[(x * 32) : (x * 32) + 32] for x in range(16)]
+    X = [bit_array[(x * 32) : (x * 32) + 32] for x in range(16)]
     X = [int.from_bytes(word.tobytes(), byteorder="little") for word in X]
+    del bit_array
+    del bit_array1
+    del length_bit_array
     return X
 
 
@@ -141,8 +150,8 @@ def prepare_wordlist(password_list: List[str]):
 
 
 def crack_gpu(password_list, target_hash: str, gpu_id:int) -> typing.List[str]:
-    if gpu_id != 0:
-        cuda.select_device(gpu_id)
+    #if gpu_id != 0:
+    cuda.select_device(gpu_id)
     arr = password_list
     target_hash_arr = [int(target_hash[i:i+8],16) for i in range(0,len(target_hash),8)]
     target_hash_arr = np.array([struct.unpack(">I", struct.pack("<I", i))[0] for i in target_hash_arr], dtype=np.uint32)
